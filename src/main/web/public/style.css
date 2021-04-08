@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .main-container {
+    display: flex;
+    flex-flow: row nowrap;
+    min-height: 100vh;
+  }
+  
+  .aside {
+    padding: 10px;
+    background: greenyellow;
+    flex: 0 1 300px;
+  }
+  .main-area {
+    padding: 10px;
+    background: whitesmoke;
+    flex: 0 1 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .section-divider {
+    border-color: rgba(192, 192, 192);
+    color:rgba(192, 192, 192);
+    display: block;
+    flex: 1 1 0px;
+    max-width: 100%;
+    height: 0px;
+    max-height: 0px;
+    border: solid;
+    border-width: thin 0 0 0;
+    transition: inherit;
+  }
+  
+  /* vue-app-component-container */
+  .vue-app-component-container {
+    flex: 0 1 800px;
+  }
+  /*  */
+  
+  
+  
+  
+  
+  
+  
+  
+  

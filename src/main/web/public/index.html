@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <title>Binance triangle arbitrage</title>
+        <!-- <link rel="stylesheet" href="/css/style.css" />
+        <script type='text/javascript' src="/lib/axios.min.js"></script> -->
+        <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="/style.css" />
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    </head>
+
+    <body>
+        <div id="vue-app-mount"></div>
+    </body>
+
+    <script type="text/x-template" id="entry-page-template">
+        <div class="overflow-x-auto bg-gray-100 bg-gray-100 font-sans min-w-screen min-h-screen">
+
+            <div class="flex-col">
+                <div class="flex items-center justify-center">
+                    <div class="w-5/6 mt-6">
+                        <span class="font-medium text-lg">Top 10 latest calculations</span>
+                    </div>
+                </div>
+ 
+                <div class="flex items-center justify-center">
+                    <div class="w-5/6">
+                        <div class="bg-white shadow-md rounded my-6">
+                            <table class="min-w-max w-full table-fixed">
+                                <thead>
+                                    <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                                        <th class="py-3 px-6 text-left">Pair</th>
+                                        <th class="py-3 px-6 text-center">Profit</th>
+                                        <th class="py-3 px-6 text-center">A->B age</th>
+                                        <th class="py-3 px-6 text-center">B->C age</th>
+                                        <th class="py-3 px-6 text-center">C->A age</th>
+                                        <th class="py-3 px-6 text-center">Age</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-gray-600 text-sm font-light">
+                                    <tr class="border-b border-gray-200" v-show="topRecentCalculations.length == 0">
+                                        <td class="py-3 px-6 text-center whitespace-nowrap" colspan="6">
+                                            <div class="flex items-center justify-center text-center">
+                                                <span class="font-medium">No data received yet.</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200 hover:bg-gray-100" v-for="(dataRow, index) in topRecentCalculations">
+                                        <td class="py-3 px-6 text-left whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <span class="font-medium">{{ dataRow.symbol }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-6 text-center whitespace-nowrap">
+                                            <div class="flex items-center justify-center text-center">
+                                                <span class="font-medium">{{ dataRow.profit.toFixed(4) + '%' }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-6 text-center whitespace-nowrap">
+                                            <div class="flex items-center justify-center">
+                                                <span class="font-medium">{{ dataRow.abAge }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-6 text-center whitespace-nowrap">
+                                            <div class="flex items-center justify-center">
+                                                <span class="font-medium">{{ dataRow.bcAge }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-6 text-center whitespace-nowrap">
+                                            <div class="flex items-center justify-center">
+                                                <span class="font-medium">{{ dataRow.caAge }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-6 text-center whitespace-nowrap">
+                                            <div class="flex items-center justify-center">
+                                                <span class="font-medium">{{ dataRow.age }}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-center">
+                    <div class="w-5/6 mt-6">
+                        <span class="font-medium text-lg">Latest status</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-center">
+                    <div class="flex items-center justify-between w-5/6">
+                        <div class="w-2/6">
+                            <div class="bg-white shadow-md rounded my-6">
+                                <table class="min-w-max w-full table-fixed">
+                                    <tbody class="text-gray-600 text-sm font-light">
+
+                                        <tr class="border-b border-gray-300">
+                                            <td class="bg-gray-200 text-gray-600 text-sm leading-normal">
+                                                <div class="py-3 px-6 text-center">
+                                                    <span class="font-medium">Latency:</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-6 text-center whitespace-nowrap">
+                                                <div class="flex items-center justify-center text-center">
+                                                    <span class="font-medium">{{ (latestStatus || {}).apiLatency || '-' }}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-b border-gray-300">
+                                            <td class="bg-gray-200 text-gray-600 text-sm leading-normal">
+                                                <div class="py-3 px-6 text-center">
+                                                    <span class="font-medium">CPU:</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-6 text-center whitespace-nowrap">
+                                                <div class="flex items-center justify-center text-center">
+                                                    <span class="font-medium">{{ (latestStatus || {}).clockUsagePerCycleValue || '-' }}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-b border-gray-300">
+                                            <td class="bg-gray-200 text-gray-600 text-sm leading-normal">
+                                                <div class="py-3 px-6 text-center">
+                                                    <span class="font-medium">Cycles per second:</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-6 text-center whitespace-nowrap">
+                                                <div class="flex items-center justify-center text-center">
+                                                    <span class="font-medium">{{ (latestStatus || {}).cyclesPerSecondValue || '-' }}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <tr class="border-b border-gray-300">
+                                            <td class="bg-gray-200 text-gray-600 text-sm leading-normal">
+                                                <div class="py-3 px-6 text-center">
+                                                    <span class="font-medium">Tickers without update:</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-6 text-center whitespace-nowrap">
+                                                <div class="flex items-center justify-center text-center">
+                                                    <span class="font-medium">{{ ((latestStatus || {}).tickersWithoutRecentDepthUpdateValue || []).length || '-' }}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+            </div>
+        </div>
+    </script>
+
+    <script type="text/javascript">
+        Vue.component('entry-page', {
+            template: '#entry-page-template',
+            props: {
+            },
+            created: function () {
+                // if user is running mozilla then use it's built-in WebSocket
+                window.WebSocket = window.WebSocket || window.MozWebSocket;
+
+                const wsUrl = `ws://${document.location.host}`;
+                var connection = new WebSocket(wsUrl);
+
+                connection.onopen = this.onConnected;
+                connection.onerror = this.onError;
+                connection.onmessage = this.onMessage;
+
+                this.connection = connection;
+            },
+            data: function () {
+                return {
+                    connection: null,
+                    topRecentCalculations: [],
+                    latestStatus: null
+                }
+            },
+            methods: {
+                onConnected: function () {
+
+                },
+                onError: function (error) {
+
+                },
+                onMessage: function (message) {
+                    try {
+                        var json = JSON.parse(message.data);
+                    } catch (e) {
+                        console.log('This doesn\'t look like a valid JSON: ', message.data);
+                        return;
+                    }
+
+                    const type = json.type;
+
+                    if (type === 'calculations') {
+                        this.topRecentCalculations = json.data;
+                    }
+
+                    if (type === 'status') {
+                        this.latestStatus = json.data;
+                    }
+                },
+                sendMessage: function () {
+                    var josn = JSON.stringify({text: 'hello'});
+
+                    this.connection.send(josn);
+                }
+            }
+        });
+      </script>
+
+    <script type="text/javascript">
+        var vueApp = new Vue({
+            el: '#vue-app-mount',
+            created: function() {
+            },
+            data: function () {
+                return {
+                }
+            },
+            render: function (renderComponent) {
+                return renderComponent('entry-page', {
+                    props: {
+                    }
+                });
+            }
+        });
+    </script>
+</html>

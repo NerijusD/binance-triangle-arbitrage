@@ -8,12 +8,20 @@ const ArbitrageExecution = require('./ArbitrageExecution');
 const CalculationNode = require('./CalculationNode');
 const SpeedTest = require('./SpeedTest');
 const Validation = require('./Validation');
+const HttpHandler = require('./web/HttpHandler');
+const WebSocketHandler = require('./web/WebSocketHandler');
 
 let recentCalculations = {};
 let initialized = null;
 
 let statusUpdate = {
     cycleTimes: [],
+};
+let recentStatus = {
+    tickersWithoutRecentDepthUpdateValue: null,
+    cyclesPerSecondValue: null,
+    clockUsagePerCycleValue: null,
+    apiLatency: null
 };
 
 // Helps identify application startup
@@ -33,6 +41,23 @@ SpeedTest.multiPing(5)
         const msg = `Experiencing ${Util.average(pings).toFixed(0)} ms of latency`;
         console.log(msg);
         logger.performance.info(msg);
+    })
+    .then(() => {
+        const msg = `Starting Http server`;
+        console.log(msg);
+
+        const server = HttpHandler.createServer();
+        HttpHandler.startServer(server);
+
+        const msg2 = `Starting websocket server`;
+        console.log(msg2);
+
+        WebSocketHandler.initWebSocket(server, (connection) => {
+            WebSocketHandler.sendToClient(connection, {
+                type: 'status',
+                data: recentStatus
+            });
+        });
     })
     .then(MarketCache.initialize)
     .then(checkBalances)
@@ -66,6 +91,7 @@ SpeedTest.multiPing(5)
 
         if (CONFIG.HUD.ENABLED) setInterval(() => HUD.displayTopCalculations(recentCalculations, CONFIG.HUD.ROWS), CONFIG.HUD.REFRESH_RATE);
         if (CONFIG.LOG.STATUS_UPDATE_INTERVAL > 0) setInterval(displayStatusUpdate, CONFIG.LOG.STATUS_UPDATE_INTERVAL * 1000 * 60);
+        if (CONFIG.WEB.ENABLED) setInterval(() => pushTopCalculationsToWeb(recentCalculations, CONFIG.WEB.ROWS), CONFIG.WEB.REFRESH_RATE);
     })
     .catch(handleError);
 
@@ -82,7 +108,7 @@ function arbitrageCycleCallback(ticker) {
         ArbitrageExecution.executeCalculatedPosition
     );
 
-    if (CONFIG.HUD.ENABLED) Object.assign(recentCalculations, results);
+    if (CONFIG.HUD.ENABLED || CONFIG.WEB.ENABLED) Object.assign(recentCalculations, results);
     statusUpdate.cycleTimes.push(Util.millisecondsSince(startTime));
 }
 
@@ -96,18 +122,23 @@ function displayStatusUpdate() {
     const statusUpdateIntervalMS = CONFIG.LOG.STATUS_UPDATE_INTERVAL * 1000 * 60;
 
     const tickersWithoutRecentDepthUpdate = MarketCache.getTickersWithoutDepthCacheUpdate(statusUpdateIntervalMS);
+    const tickersWithoutRecentDepthUpdateValue = tickersWithoutRecentDepthUpdate.length > 0
+        ? tickersWithoutRecentDepthUpdate.sort()
+        : [];
     if (tickersWithoutRecentDepthUpdate.length > 0) {
-        logger.performance.debug(`Tickers without recent depth cache update: [${tickersWithoutRecentDepthUpdate.sort()}]`);
+        logger.performance.debug(`Tickers without recent depth cache update: [${tickersWithoutRecentDepthUpdateValue}]`);
     }
 
     const cyclesPerSecond = statusUpdate.cycleTimes.length / (statusUpdateIntervalMS / 1000);
-    logger.performance.debug(`Depth cache updates per second:  ${cyclesPerSecond.toFixed(2)}`);
+    const cyclesPerSecondValue = cyclesPerSecond.toFixed(2);
+    logger.performance.debug(`Depth cache updates per second:  ${cyclesPerSecondValue}`);
 
     const clockUsagePerCycle = Util.sum(statusUpdate.cycleTimes) / statusUpdateIntervalMS * 100;
+    const clockUsagePerCycleValue = clockUsagePerCycle.toFixed(2);
     if (clockUsagePerCycle > 50) {
-        logger.performance.warn(`CPU clock usage for calculations:  ${clockUsagePerCycle.toFixed(2)}%`);
+        logger.performance.warn(`CPU clock usage for calculations:  ${clockUsagePerCycleValue}%`);
     } else {
-        logger.performance.debug(`CPU clock usage for calculations:  ${clockUsagePerCycle.toFixed(2)}%`);
+        logger.performance.debug(`CPU clock usage for calculations:  ${clockUsagePerCycleValue}%`);
     }
 
     statusUpdate.cycleTimes = [];
@@ -115,6 +146,18 @@ function displayStatusUpdate() {
     SpeedTest.ping()
         .then((latency) => {
             logger.performance.debug(`API Latency: ${latency} ms`);
+            recentStatus = {
+                tickersWithoutRecentDepthUpdateValue: tickersWithoutRecentDepthUpdateValue,
+                cyclesPerSecondValue: cyclesPerSecondValue,
+                clockUsagePerCycleValue: clockUsagePerCycleValue,
+                apiLatency: latency
+            };
+            if (CONFIG.WEB.ENABLED) {
+                WebSocketHandler.broadcast({
+                    type: 'status',
+                    data: recentStatus
+                });
+            }
         })
         .catch(err => logger.performance.warn(err.message));
 }
@@ -162,4 +205,30 @@ function checkMarket() {
     }
 
     return Promise.resolve();
+}
+
+function pushTopCalculationsToWeb (calculations, rowCount) {
+    const now = Date.now();
+
+    let tableData = [];
+
+    Object.values(calculations)
+        .filter(({depth: {ab, bc, ca}}) => ab.eventTime && bc.eventTime && ca.eventTime)
+        .sort((a, b) => a.percent > b.percent ? -1 : 1)
+        .slice(0, rowCount)
+        .forEach(({ trade, percent, depth }) => {
+            tableData.push({
+                symbol: `${trade.symbol.a}-${trade.symbol.b}-${trade.symbol.c}`,
+                profit: percent,
+                abAge: `${now - depth.ab.eventTime}`,
+                bcAge: `${now - depth.bc.eventTime}`,
+                caAge: `${now - depth.ca.eventTime}`,
+                age: `${now - Math.min(depth.ab.eventTime, depth.bc.eventTime, depth.ca.eventTime)}`
+            });
+        });
+
+        WebSocketHandler.broadcast({
+            type: 'calculations',
+            data: tableData
+        });
 }

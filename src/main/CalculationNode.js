@@ -13,7 +13,7 @@ const CalculationNode = {
                     ca: depthCacheClone[trade.ca.ticker]
                 };
                 const calculated = CalculationNode.optimize(trade, depthSnapshot);
-                if (CONFIG.HUD.ENABLED) results[calculated.id] = calculated;
+                if (CONFIG.HUD.ENABLED || CONFIG.WEB.ENABLED) results[calculated.id] = calculated;
                 if (executionCheckCallback(calculated)) {
                     executionCallback(calculated);
                     break;
