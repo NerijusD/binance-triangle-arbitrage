@@ -48,7 +48,10 @@
                                             </div>
                                         </td>
                                     </tr>
-                                    <tr class="border-b border-gray-200 hover:bg-gray-100" v-for="(dataRow, index) in topRecentCalculations">
+                                    <tr 
+                                        class="border-b border-gray-200"
+                                        :class="{'bg-red-200': dataRow.profit <= 0, 'bg-green-200': dataRow.profit > 0, 'hover:bg-red-300': dataRow.profit <= 0, 'hover:bg-green-300': dataRow.profit > 0}"
+                                        v-for="(dataRow, index) in topRecentCalculations">
                                         <td class="py-3 px-6 text-left whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <span class="font-medium">{{ dataRow.symbol }}</span>
@@ -57,6 +60,12 @@
                                         <td class="py-3 px-6 text-center whitespace-nowrap">
                                             <div class="flex items-center justify-center text-center">
                                                 <span class="font-medium">{{ dataRow.profit.toFixed(4) + '%' }}</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" v-show="dataRow.profit > 0">
+                                                    <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                                                </svg>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" v-show="dataRow.profit <= 0">
+                                                    <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                                                </svg>
                                             </div>
                                         </td>
                                         <td class="py-3 px-6 text-center whitespace-nowrap">
