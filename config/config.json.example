@@ -36,6 +36,12 @@
         "REFRESH_RATE": 500
     },
 
+    "WEB": {
+        "ENABLED": true,
+        "ROWS": 10,
+        "REFRESH_RATE": 500
+    },
+
     "LOG": {
         "LEVEL": "debug",
         "PRETTY_PRINT": true,
